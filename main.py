@@ -36,7 +36,7 @@ import uvicorn
 DATABASE_URL = os.getenv("DATABASE_URL")  # required in production (postgres)
 REDIS_URL = os.getenv("REDIS_URL", None)  # optional (for caching/rate)
 APP_SECRET_KEY = os.getenv("APP_SECRET_KEY", secrets.token_urlsafe(32))
-BASE_URL = os.getenv("BASE_URL", "")  # e.g. https://vetra-ai.onrender.com
+BASE_URL = os.getenv("BASE_URL", "")  # e.g. https://vetra-ai.ondetaspace.com
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()] or ["*"]
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
@@ -423,7 +423,7 @@ def security_health():
     }
 
 # ----------------------
-# Run (use uvicorn externally in Render)
+# Run (use uvicorn externally in deta space)
 # ----------------------
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=True)
