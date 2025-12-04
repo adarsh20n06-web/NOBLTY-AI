@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vetra AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #2b5876, #4e4376);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ffce00, #ff4f4f);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            max-width: 600px;
+            margin: auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: none;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            background: #ffce00;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #ffb400;
+        }
+
+        #responseBox {
+            margin-top: 15px;
+            background: rgba(255,255,255,0.15);
+            padding: 15px;
+            border-radius: 10px;
+            min-height: 80px;
+            text-align: left;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="logo">⚡ Vetra AI</div>
+    <p style="opacity:0.8;">Your personal AI assistant powered by FastAPI</p>
+
+    <div class="card">
+        <input id="apiKey" type="text" placeholder="Enter your API Key (vetra_xxx)" />
+
+        <textarea id="prompt" rows="4" placeholder="Type your question..."></textarea>
+
+        <button onclick="askVetra()">Ask Vetra</button>
+
+        <div id="responseBox">Response will appear here...</div>
+    </div>
+
+    <script>
+        async function askVetra() {
+            const key = document.getElementById("apiKey").value.trim();
+            const prompt = document.getElementById("prompt").value.trim();
+
+            if (!key || !prompt) {
+                alert("API key & prompt required!");
+                return;
+            }
+
+            document.getElementById("responseBox").innerText = "Thinking...";
+
+            try {
+                const res = await fetch("https://YOUR-API-URL/ask", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": key
+                    },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                const data = await res.json();
+                document.getElementById("responseBox").innerText = data.answer || JSON.stringify(data, null, 2);
+
+            } catch (err) {
+                document.getElementById("responseBox").innerText = "Error: " + err;
+            }
+        }
+    </script>
+
+</body>
+</html>
