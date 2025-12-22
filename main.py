@@ -1,3 +1,4 @@
+"""
 Vetra AI - Enterprise-Grade High Security Global-Ready
 Features:
 - Secure API keys (hashed, expiration, max uses, optional IP binding)
@@ -20,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-import asyncpg, aioredis, uvicorn, jwt, cryptography
+import asyncpg, aioredis, uvicorn, jwt
 from cryptography.fernet import Fernet
 from slowapi import Limiter
 from slowapi.middleware import SlowAPIMiddleware
@@ -32,15 +33,15 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 # ===========================
 DATABASE_URL = os.getenv("DATABASE_URL")
 REDIS_URL = os.getenv("REDIS_URL")
-APP_SECRET = os.getenv("APP_SECRET", secrets.token_urlsafe(32))
-ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET", secrets.token_urlsafe(32))
+APP_SECRET = os.getenv("APP_SECRET") or secrets.token_urlsafe(32)
+ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET") or secrets.token_urlsafe(32)
 DEFAULT_RATE = "60/minute"
 
 API_KEY_MAX_USES = 1000
 API_KEY_EXPIRE_DAYS = 30
 
 # Encryption key for sensitive fields
-FERNET_KEY = os.getenv("FERNET_KEY", Fernet.generate_key().decode())
+FERNET_KEY = os.getenv("FERNET_KEY") or Fernet.generate_key().decode()
 fernet = Fernet(FERNET_KEY.encode())
 
 if not DATABASE_URL or not REDIS_URL:
@@ -72,7 +73,10 @@ app.add_middleware(SlowAPIMiddleware)
 # ===========================
 @app.on_event("startup")
 async def startup():
-    app.state.db = await asyncpg.create_pool(DATABASE_URL, ssl=True)
+    ssl_opt = True
+    if "localhost" in DATABASE_URL or "127.0.0.1" in DATABASE_URL:
+        ssl_opt = False
+    app.state.db = await asyncpg.create_pool(DATABASE_URL, ssl=ssl_opt)
     app.state.redis = await aioredis.from_url(REDIS_URL)
     async with app.state.db.acquire() as c:
         # Users
@@ -176,15 +180,12 @@ async def record_audit(api_key_id: int, email: str, endpoint: str, meta: dict = 
 class CustomBrain:
     def __init__(self):
         self.short_memory: Dict[str, List[str]] = {}
-        self.long_memory: Dict[str, List[str]] = {}  # Optional long-term memory (encrypted)
+        self.long_memory: Dict[str, List[str]] = {}
 
     def respond(self, user: str, prompt: str) -> Dict[str,str]:
-        # Short-term memory
         self.short_memory.setdefault(user, []).append(prompt)
         self.short_memory[user] = self.short_memory[user][-10:]
-        # Long-term memory (optional)
-        self.long_memory.setdefault(user, []).append(prompt)  # Can encrypt if needed
-        # Placeholder AI response logic
+        self.long_memory.setdefault(user, []).append(prompt)
         answer = f"Vetra AI processed: {prompt[:200]}"
         reason = f"Processed prompt length {len(prompt)}"
         return {"answer": answer, "reason": reason}
@@ -236,10 +237,12 @@ async def ask(request: Request, data: AskModel):
     if not key:
         raise HTTPException(401, "Missing API key")
     async with app.state.db.acquire() as c:
-        rows = await c.fetch("SELECT * FROM api_keys WHERE revoked=false")
+        rows = await c.fetch("SELECT * FROM api_keys WHERE revoked=false") or []
         valid = False
+        email = None
+        api_key_id = None
         for r in rows:
-            if verify_key(key, r["key_hash"]):
+            if r.get("key_hash") and verify_key(key, r["key_hash"]):
                 valid = True
                 email = r["email"]
                 api_key_id = r["id"]
@@ -250,10 +253,8 @@ async def ask(request: Request, data: AskModel):
                 break
     if not valid:
         raise HTTPException(403, "Invalid API key")
-
     async with app.state.db.acquire() as c:
         await c.execute("UPDATE api_keys SET uses=uses+1 WHERE id=$1", api_key_id)
-
     await record_audit(api_key_id, email, "/ask", {"prompt_len": len(data.prompt)})
     response = brain.respond(email, data.prompt)
     return {"answer": response["answer"], "reason": response["reason"], "user": email, "time": datetime.utcnow().isoformat()}
