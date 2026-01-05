@@ -1,20 +1,9 @@
 """
-Vetra AI - Enterprise-Grade High Security Global-Ready
-Features:
-- Secure API keys (hashed, expiration, max uses, optional IP binding)
-- Prompt firewall & rate-limiting
-- Immutable, encrypted audit logs
-- JWT Admin
-- Custom AI brain (fully your own)
-- Short-term & optional long-term memory
-- Redis + Async Postgres for scalability
-- Prometheus metrics for monitoring
-- Ready for HTTPS/TLS deployment
-- Optional human-in-loop for risky prompts
+Vetra AI + Syra AI - Enterprise-Grade Secure Custom AI
 """
 
-import os, time, secrets, re, bcrypt, json, base64, hashlib
-from datetime import datetime, timedelta
+import os, time, secrets, re, bcrypt, json
+from datetime import datetime
 from typing import Dict, List, Any
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,11 +25,8 @@ REDIS_URL = os.getenv("REDIS_URL")
 APP_SECRET = os.getenv("APP_SECRET") or secrets.token_urlsafe(32)
 ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET") or secrets.token_urlsafe(32)
 DEFAULT_RATE = "60/minute"
-
 API_KEY_MAX_USES = 1000
 API_KEY_EXPIRE_DAYS = 30
-
-# Encryption key for sensitive fields
 FERNET_KEY = os.getenv("FERNET_KEY") or Fernet.generate_key().decode()
 fernet = Fernet(FERNET_KEY.encode())
 
@@ -56,7 +42,7 @@ LAT = Histogram("vetra_latency", "Latency", ["endpoint"])
 # ===========================
 # APP INIT
 # ===========================
-app = FastAPI(title="Vetra AI Enterprise", version="1.0")
+app = FastAPI(title="Vetra AI + Syra AI", version="1.0")
 app.add_middleware(SessionMiddleware, secret_key=APP_SECRET)
 app.add_middleware(
     CORSMiddleware,
@@ -79,7 +65,6 @@ async def startup():
     app.state.db = await asyncpg.create_pool(DATABASE_URL, ssl=ssl_opt)
     app.state.redis = await aioredis.from_url(REDIS_URL)
     async with app.state.db.acquire() as c:
-        # Users
         await c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -88,7 +73,6 @@ async def startup():
             created_at BIGINT
         );
         """)
-        # API keys
         await c.execute("""
         CREATE TABLE IF NOT EXISTS api_keys (
             id SERIAL PRIMARY KEY,
@@ -102,7 +86,6 @@ async def startup():
             bound_ip TEXT
         );
         """)
-        # Audit logs (encrypted metadata)
         await c.execute("""
         CREATE TABLE IF NOT EXISTS audit_logs (
             id SERIAL PRIMARY KEY,
@@ -123,11 +106,11 @@ async def shutdown():
 # MODELS
 # ===========================
 class RegisterModel(BaseModel):
-    email: str = Field(..., example="user@example.com")
-    name: str = Field(None, example="Vetra User")
+    email: str
+    name: str = None
 
 class AskModel(BaseModel):
-    prompt: str = Field(..., min_length=1, max_length=5000)
+    prompt: str
 
 # ===========================
 # HELPERS
@@ -154,8 +137,6 @@ def admin_create_token(name: str) -> str:
 def admin_verify_token(token: str) -> Dict[str, Any]:
     try:
         return jwt.decode(token, ADMIN_JWT_SECRET, algorithms=["HS256"])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(401, "Admin token expired")
     except:
         raise HTTPException(401, "Invalid admin token")
 
@@ -175,22 +156,28 @@ async def record_audit(api_key_id: int, email: str, endpoint: str, meta: dict = 
                         api_key_id, email, endpoint, encrypted_meta, int(time.time()))
 
 # ===========================
-# CUSTOM AI BRAIN
+# CUSTOM AI BRAINS
 # ===========================
-class CustomBrain:
+# Original Vetra AI brain
+class VetraBrain:
+    def respond(self, user: str, prompt: str):
+        return {"answer": f"Vetra AI processed: {prompt[:200]}", "reason": "Original Vetra logic"}
+
+vetra_brain = VetraBrain()
+
+# Syra AI - custom learning model
+class SyraAI:
     def __init__(self):
         self.short_memory: Dict[str, List[str]] = {}
         self.long_memory: Dict[str, List[str]] = {}
 
-    def respond(self, user: str, prompt: str) -> Dict[str,str]:
+    def respond(self, user: str, prompt: str):
         self.short_memory.setdefault(user, []).append(prompt)
         self.short_memory[user] = self.short_memory[user][-10:]
         self.long_memory.setdefault(user, []).append(prompt)
-        answer = f"Vetra AI processed: {prompt[:200]}"
-        reason = f"Processed prompt length {len(prompt)}"
-        return {"answer": answer, "reason": reason}
+        return {"answer": f"Syra AI processed: {prompt[::-1]}", "reason": f"Prompt length {len(prompt)}"}
 
-brain = CustomBrain()
+syra_brain = SyraAI()
 
 # ===========================
 # ROUTES
@@ -198,10 +185,6 @@ brain = CustomBrain()
 @app.get("/health")
 async def health():
     return {"status": "ok"}
-
-@app.get("/metrics")
-async def metrics():
-    return JSONResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 @app.post("/register")
 @limiter.limit("5/minute")
@@ -236,6 +219,7 @@ async def ask(request: Request, data: AskModel):
     key = request.headers.get("Authorization")
     if not key:
         raise HTTPException(401, "Missing API key")
+
     async with app.state.db.acquire() as c:
         rows = await c.fetch("SELECT * FROM api_keys WHERE revoked=false") or []
         valid = False
@@ -251,39 +235,25 @@ async def ask(request: Request, data: AskModel):
                 if r["uses"] >= r["max_uses"]:
                     raise HTTPException(403, "Usage limit reached")
                 break
+
     if not valid:
         raise HTTPException(403, "Invalid API key")
+
     async with app.state.db.acquire() as c:
         await c.execute("UPDATE api_keys SET uses=uses+1 WHERE id=$1", api_key_id)
+
     await record_audit(api_key_id, email, "/ask", {"prompt_len": len(data.prompt)})
-    response = brain.respond(email, data.prompt)
-    return {"answer": response["answer"], "reason": response["reason"], "user": email, "time": datetime.utcnow().isoformat()}
 
-# ===========================
-# ADMIN ROUTES
-# ===========================
-def require_admin(request: Request):
-    auth = request.headers.get("Authorization")
-    if not auth or not auth.startswith("Bearer "):
-        raise HTTPException(401, "Admin token missing")
-    token = auth.split(" ",1)[1]
-    return admin_verify_token(token)
+    # Combined response: Vetra + Syra
+    vetra_resp = vetra_brain.respond(email, data.prompt)
+    syra_resp = syra_brain.respond(email, data.prompt)
 
-@app.post("/admin/token")
-def get_admin_token(payload: dict):
-    master_key = payload.get("master_key")
-    if not master_key or master_key != APP_SECRET:
-        raise HTTPException(403, "Invalid master key")
-    token = admin_create_token("admin")
-    return {"token": token, "expires_sec": 3600}
-
-@app.get("/admin/overview")
-async def admin_overview(request: Request):
-    require_admin(request)
-    async with app.state.db.acquire() as c:
-        total_users = await c.fetchval("SELECT COUNT(*) FROM users")
-        total_keys = await c.fetchval("SELECT COUNT(*) FROM api_keys")
-    return {"users": total_users, "api_keys": total_keys, "status": "ok"}
+    return {
+        "vetra": vetra_resp,
+        "syra": syra_resp,
+        "user": email,
+        "time": datetime.utcnow().isoformat()
+    }
 
 # ===========================
 # RUN
