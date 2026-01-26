@@ -1,1 +1,4 @@
-web: uvicorn app:app --host 0.0.0.0 --port 8000
+# ========================
+# Web server for FastAPI app
+# ========================
+web: uvicorn main:app --host=0.0.0.0 --port=${PORT:-8000}
