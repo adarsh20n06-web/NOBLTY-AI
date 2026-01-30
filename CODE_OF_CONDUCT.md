@@ -19,8 +19,8 @@ All contributors and users are expected to follow these guidelines:
 
 If you witness or experience unacceptable behavior, report it to the owner:
 
-- Email: conduct@nobltyaastrax.com (replace with official contact)
+- Email: conductnobltyaastrax@gmail.com
 
-## Acknowledgements
+Acknowledgements
 
 By contributing or using this repository, you agree to follow this Code of Conduct.
