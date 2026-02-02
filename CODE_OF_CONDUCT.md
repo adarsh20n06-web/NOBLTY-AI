@@ -19,7 +19,7 @@ All contributors and users are expected to follow these guidelines:
 
 If you witness or experience unacceptable behavior, report it to the owner:
 
-- Email: conductnobltyaastrax@gmail.com
+- Email: nobltyaastrax@gmail.com
 
 Acknowledgements
 
