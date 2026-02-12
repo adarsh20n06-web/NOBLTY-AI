@@ -2,8 +2,6 @@
 
 **NOBLTY AI × Aastrax** is a proprietary, self-hosted, multilingual artificial intelligence system built on a secure and controlled reasoning architecture.
 
-The system is designed to deliver accurate, contextual, and intelligent responses without relying on publicly branded or third-party named language models.
-
 It internally integrates two independent AI cores:
 
 - **NOBLTY Engine** — Logic, safety enforcement, governance, and controlled reasoning  
