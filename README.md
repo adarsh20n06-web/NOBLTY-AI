@@ -55,11 +55,7 @@ Both engines operate collaboratively and merge their outputs to produce a single
 ### Authentication
 - OAuth 2.0 (Authlib)  
 
----
-
-## 🚀 Deployment
-
-The system is fully deployment-ready for any platform supporting Python ASGI applications.
+...
 
 ### Requirements
 
@@ -89,9 +85,3 @@ A `Procfile` is included for simplified production deployment.
 This software is proprietary.  
 Unauthorized copying, modification, distribution, sublicensing, or use of this software, in whole or in part, is strictly prohibited without explicit written permission from the owner.
 
----
-
-## ⚠ Disclaimer
-
-This project does not expose, embed, or depend on any third-party branded language models.  
-All reasoning, intelligence, and response generation are handled internally by proprietary system components.
