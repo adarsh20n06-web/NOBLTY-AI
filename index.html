@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NOBLTY AI × Aastrax</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="description" content="NOBLTY AI - Secure, multilingual, self-hosted artificial intelligence system.">
+
+<meta property="og:title" content="NOBLTY AI × Aastrax">
+<meta property="og:description" content="Advanced multilingual AI with secure architecture.">
+<meta property="og:image" content="https://raw.githubusercontent.com/adarsh20n06-web/NOBLTY-AI/main/assets/logo/noblty-ai-logo.png">
+
+<link rel="icon" type="image/png" sizes="32x32" href="https://raw.githubusercontent.com/adarsh20n06-web/NOBLTY-AI/main/assets/logo/noblty-ai-logo.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+    font-family:'Poppins',sans-serif;
+    background:linear-gradient(135deg,#1e3c72,#2a5298);
+    color:white;
+}
+
+/* NAV */
+nav{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 40px;
+}
+nav h1{font-size:22px}
+nav a{
+    color:white;
+    text-decoration:none;
+    margin-left:20px;
+    font-weight:500;
+}
+
+/* HERO */
+.hero{
+    text-align:center;
+    padding:80px 20px;
+}
+.hero img{
+    width:110px;
+    margin-bottom:20px;
+}
+.hero h2{
+    font-size:38px;
+    margin-bottom:15px;
+}
+.hero p{
+    max-width:600px;
+    margin:auto;
+    opacity:.85;
+}
+.hero button{
+    margin-top:25px;
+    padding:14px 28px;
+    border:none;
+    border-radius:8px;
+    font-weight:600;
+    cursor:pointer;
+    background:#ffce00;
+}
+
+/* FEATURES */
+.features{
+    padding:60px 20px;
+    text-align:center;
+}
+.features h3{margin-bottom:30px;font-size:28px}
+.feature-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:20px;
+    max-width:1000px;
+    margin:auto;
+}
+.feature{
+    background:rgba(255,255,255,.1);
+    padding:20px;
+    border-radius:12px;
+    backdrop-filter:blur(10px);
+}
+
+/* APP SECTION */
+.app{
+    padding:60px 20px;
+    max-width:700px;
+    margin:auto;
+}
+.card{
+    background:rgba(255,255,255,.12);
+    padding:20px;
+    border-radius:16px;
+    backdrop-filter:blur(15px);
+}
+textarea{
+    width:100%;
+    padding:12px;
+    border-radius:8px;
+    border:none;
+    margin-top:10px;
+}
+button.ask{
+    width:100%;
+    margin-top:10px;
+    padding:12px;
+    border:none;
+    border-radius:8px;
+    background:#ffce00;
+    font-weight:600;
+    cursor:pointer;
+}
+#responseBox{
+    margin-top:12px;
+    max-height:250px;
+    overflow:auto;
+    background:rgba(255,255,255,.15);
+    padding:10px;
+    border-radius:8px;
+}
+
+/* FOOTER */
+footer{
+    text-align:center;
+    padding:30px 10px;
+    opacity:.7;
+}
+
+/* Loader */
+.loader{
+    width:16px;
+    height:16px;
+    border:3px solid rgba(255,255,255,0.3);
+    border-top:3px solid #ffce00;
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+    display:inline-block;
+}
+@keyframes spin{
+    0%{transform:rotate(0deg);}
+    100%{transform:rotate(360deg);}
+}
+</style>
+</head>
+
+<body>
+
+<nav>
+<h1>NOBLTY AI</h1>
+<div>
+<a href="#features">Features</a>
+<a href="#app">Launch</a>
+</div>
+</nav>
+
+<section class="hero">
+<img src="https://raw.githubusercontent.com/adarsh20n06-web/NOBLTY-AI/main/assets/logo/noblty-ai-logo.png">
+<h2>Secure Multilingual AI System</h2>
+<p>Powered by NOBLTY Engine and Aastrax Engine delivering safe, intelligent and contextual responses.</p>
+<button onclick="document.getElementById('app').scrollIntoView()">Launch AI</button>
+</section>
+
+<section class="features" id="features">
+<h3>Core Features</h3>
+<div class="feature-grid">
+<div class="feature">Multilingual (English, Hindi, Hinglish)</div>
+<div class="feature">Secure OAuth Authentication</div>
+<div class="feature">Context Memory (Redis)</div>
+<div class="feature">Owner Controlled Training</div>
+<div class="feature">Fully Self Hosted</div>
+<div class="feature">Production Ready Deployment</div>
+</div>
+</section>
+
+<section class="app" id="app">
+<div class="card">
+<textarea id="prompt" rows="4" placeholder="Ask something..."></textarea>
+<button class="ask" onclick="askAI()">Ask AI</button>
+<div id="responseBox"></div>
+</div>
+</section>
+
+<footer>
+© 2026 NOBLTY AI × Aastrax — All Rights Reserved
+</footer>
+
+<script>
+const responseBox=document.getElementById("responseBox");
+
+function addResponse(text){
+const div=document.createElement("div");
+div.style.marginBottom="10px";
+div.innerHTML=text;
+responseBox.appendChild(div);
+responseBox.scrollTop=responseBox.scrollHeight;
+}
+
+async function askAI(){
+const q=document.getElementById("prompt").value.trim();
+if(!q) return;
+
+addResponse('<span class="loader"></span> Thinking...');
+
+try{
+const r=await fetch("/ask",{
+method:"POST",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({prompt:q})
+});
+const d=await r.json();
+responseBox.lastChild.remove();
+addResponse(d.answer);
+}catch{
+responseBox.lastChild.remove();
+addResponse("Error connecting to server.");
+}
+}
+</script>
+
+</body>
+</html>
